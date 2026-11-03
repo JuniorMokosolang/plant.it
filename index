@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PLANT IT - Game Bertani & Beternak</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;background:#000;font-family:'Segoe UI',Arial,sans-serif;user-select:none}
+canvas{display:block}
+#hud{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+#hud>*{pointer-events:auto}
+#top-bar{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:12px;align-items:center;background:rgba(0,0,0,.75);padding:8px 18px;border-radius:12px;color:#fff;font-size:13px;white-space:nowrap;box-shadow:0 4px 15px rgba(0,0,0,.4)}
+.stat{display:flex;align-items:center;gap:4px;font-weight:600}
+.top-btn{background:linear-gradient(180deg,#4CAF50,#388E3C);color:#fff;border:2px solid #2E7D32;border-radius:8px;padding:5px 10px;cursor:pointer;font-size:11px;font-weight:700;transition:transform .1s}
+.top-btn:hover{transform:scale(1.05)}.top-btn:active{transform:scale(.95)}
+#xp-bar-c{width:130px;height:16px;background:rgba(0,0,0,.6);border-radius:8px;overflow:hidden;position:relative;border:1px solid #777}
+#xp-fill{height:100%;background:linear-gradient(90deg,#FFD700,#FFA000);width:0%;transition:width .25s ease-out}
+#xp-text{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;text-shadow:1px 1px 2px #000}
+#hotbar{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:4px}
+.hslot{width:56px;height:56px;background:rgba(20,20,20,.75);border:2px solid #555;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:9px;cursor:pointer;position:relative;transition:all .15s}
+.hslot:hover{border-color:#aaa}
+.hslot.active{border-color:#FFD700;background:rgba(255,215,0,.25);transform:translateY(-3px)}
+.hslot .sk{position:absolute;top:2px;left:4px;font-size:9px;color:#bbb;font-weight:bold}
+.hslot .si{font-size:22px;line-height:1}
+.hslot .sc{font-size:9px;color:#ffd700;font-weight:bold}
+.hslot .sn{font-size:8px;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:52px;text-align:center}
+#notifs{position:absolute;top:70px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:5px;align-items:center;pointer-events:none}
+.notif{background:rgba(15,15,15,.85);color:#fff;padding:7px 18px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid #444;box-shadow:0 4px 12px rgba(0,0,0,.5);animation:nfA 2.5s forwards;white-space:nowrap}
+@keyframes nfA{0%{opacity:0;transform:translateY(12px)}10%{opacity:1;transform:translateY(0)}85%{opacity:1}100%{opacity:0;transform:translateY(-12px)}}
+#ctx-ui{position:absolute;bottom:82px;left:50%;transform:translateX(-50%);display:flex;gap:8px}
+.cbtn{background:linear-gradient(180deg,#2196F3,#1565C0);color:#fff;border:2px solid #0D47A1;border-radius:10px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:700;transition:transform .1s;display:none;box-shadow:0 4px 10px rgba(0,0,0,.4)}
+.cbtn:hover{transform:scale(1.06)}.cbtn:active{transform:scale(.95)}.cbtn.vis{display:block}
+.cbtn.feed{background:linear-gradient(180deg,#8BC34A,#558B2F);border-color:#33691E}
+#interact-hint{position:absolute;bottom:148px;left:50%;transform:translateX(-50%);color:#fff;font-size:12px;font-weight:600;background:rgba(0,0,0,.65);padding:5px 14px;border-radius:6px;display:none;pointer-events:none;border:1px solid #555}
+.panel-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);display:none;z-index:1000;pointer-events:auto;justify-content:center;align-items:center}
+.panel-overlay.vis{display:flex}
+.panel{background:linear-gradient(180deg,#F5F5DC,#E8DCC8);border:3px solid #8B4513;border-radius:15px;padding:20px;min-width:340px;max-width:520px;max-height:82vh;overflow-y:auto;position:relative;box-shadow:0 12px 35px rgba(0,0,0,.6);pointer-events:auto}
+.panel h2{text-align:center;color:#3E2723;margin-bottom:12px;font-size:18px;border-bottom:2px solid #8B4513;padding-bottom:6px}
+.pcl{position:absolute;top:10px;right:12px;background:#C62828;color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:14px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.pcl:hover{background:#E53935}
+.inv-tabs{display:flex;gap:4px;margin-bottom:10px}
+.inv-tab{flex:1;padding:6px;text-align:center;background:#D7CCC8;border:1px solid #8B4513;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:#3E2723;transition:all .15s}
+.inv-tab.active{background:#8B4513;color:#fff}
+.inv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;min-height:70px}
+.inv-item{background:rgba(139,69,19,.12);border:1px solid #A1887F;border-radius:8px;padding:8px 4px;text-align:center;font-size:10px;color:#3E2723;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.inv-item .ii{font-size:24px;display:block;margin-bottom:3px}
+.inv-item .ic{font-weight:700;color:#5D4037;font-size:11px}
+.shop-list{display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow-y:auto;padding-right:4px}
+.shop-item{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.6);border:1px solid #BCAAA4;border-radius:8px;padding:8px 12px}
+.shop-item-info{display:flex;align-items:center;gap:10px}
+.shop-item-icon{font-size:28px}
+.shop-item-title{font-size:13px;font-weight:700;color:#3E2723}
+.shop-item-sub{font-size:11px;color:#6D4C41}
+.shop-btn{background:linear-gradient(180deg,#4CAF50,#2E7D32);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;transition:transform .1s}
+.shop-btn:hover{transform:scale(1.05)}.shop-btn:active{transform:scale(.95)}
+.shop-btn.sell{background:linear-gradient(180deg,#FF9800,#E65100)}
+.shop-btn.sell-all{background:linear-gradient(180deg,#9C27B0,#4A148C);margin-left:4px}
+.shop-btn.disabled{background:#BDBDBD;cursor:not-allowed;transform:none}
+.skin-card{background:rgba(255,255,255,.65);border:1px solid #8B4513;border-radius:10px;padding:12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.skin-card-left{display:flex;align-items:center;gap:12px}
+.skin-card-icon{font-size:32px}
+.skin-card-title{font-size:14px;font-weight:bold;color:#3E2723}
+.skin-card-desc{font-size:11px;color:#5D4037}
+.skin-badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:bold;margin-top:4px}
+.badge-equipped{background:#E8F5E9;color:#2E7D32;border:1px solid #A5D6A7}
+.badge-owned{background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9}
+.badge-locked{background:#ECEFF1;color:#546E7A;border:1px solid #CFD8DC}
+.equip-btn{background:linear-gradient(180deg,#2196F3,#1565C0);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.equip-btn:hover{transform:scale(1.05)}
+.unequip-btn{background:linear-gradient(180deg,#757575,#424242);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.unequip-btn:hover{transform:scale(1.05)}
+.upgrade-card{background:rgba(255,255,255,.65);border:1px solid #8B4513;border-radius:10px;padding:12px;margin-bottom:10px}
+.upgrade-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.upgrade-title{font-size:14px;font-weight:bold;color:#3E2723}
+.upgrade-desc{font-size:11px;color:#5D4037;line-height:1.4}
+.upgrade-status{font-size:12px;font-weight:bold;margin-top:6px}
+#key-hints{position:absolute;bottom:76px;right:10px;color:rgba(255,255,255,.6);font-size:11px;pointer-events:none;text-align:right;line-height:1.5;background:rgba(0,0,0,.4);padding:6px 10px;border-radius:6px}
+#mutation-banner{position:fixed;top:32%;left:50%;transform:translate(-50%,-50%) scale(0);pointer-events:none;z-index:30;text-align:center;transition:transform .3s cubic-bezier(.175,.885,.32,1.275),opacity .3s;opacity:0}
+#mutation-banner.show{transform:translate(-50%,-50%) scale(1);opacity:1}
+.mut-box{background:linear-gradient(135deg,#212121,#1a237e,#4a148c);color:#fff;border:3px solid #FFD700;border-radius:18px;padding:22px 36px;box-shadow:0 0 35px rgba(255,215,0,.8),0 15px 40px rgba(0,0,0,.7)}
+.mut-title{font-size:22px;font-weight:900;letter-spacing:1px;color:#FFEA00;text-shadow:0 0 10px #FF6D00,0 2px 4px #000;margin-bottom:6px}
+.mut-desc{font-size:16px;font-weight:700;color:#00E5FF;text-shadow:0 0 8px rgba(0,229,255,.6)}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="top-bar">
+    <span class="stat" id="coin-d">💰 10</span>
+    <span class="stat" id="level-d">⭐ Lv.1</span>
+    <div id="xp-bar-c"><div id="xp-fill"></div><div id="xp-text">0/100</div></div>
+    <span class="stat" id="water-d">💧 5/5</span>
+    <span class="stat" id="skin-d">🪣 Tanpa Skin</span>
+    <button class="top-btn" id="btn-upgrade">🔨 Upgrade Plot Tanaman</button>
+    <button class="top-btn" id="btn-skin">🎨 Skin Ember</button>
+  </div>
+  <div id="hotbar"></div>
+  <div id="notifs"></div>
+  <div id="ctx-ui">
+    <button class="cbtn" id="cb-bibit">🌱 Toko Bibit</button>
+    <button class="cbtn" id="cb-jualtan">🥕 Toko Jual Tanaman</button>
+    <button class="cbtn" id="cb-hewan">🐄 Beli Hewan</button>
+    <button class="cbtn" id="cb-jualter">🥚 Jual Hasil Ternak</button>
+    <button class="cbtn" id="cb-air">💧 Isi Air</button>
+    <button class="cbtn feed" id="cb-feed">🌾 Beri Makan</button>
+  </div>
+  <div id="interact-hint"></div>
+  <div id="key-hints">I = Inventori | Klik Kanan + Geser = Putar Kamera<br>WASD = Gerak | Shift = Lari | Scroll = Zoom<br>Klik / E = Interaksi Plot / Toko / Sumur / Hewan</div>
+</div>
+
+<div id="mutation-banner">
+  <div class="mut-box">
+    <div class="mut-title">✨ SELAMAT ANDA MENDAPATKAN MUTASI! ✨</div>
+    <div class="mut-desc" id="mut-desc">Wortel Rainbow</div>
+  </div>
+</div>
+
+<div class="panel-overlay" id="pnl-inv">
+  <div class="panel">
+    <button class="pcl" id="pnl-inv-cl">✕</button>
+    <h2>📦 Inventori</h2>
+    <div class="inv-tabs" id="inv-tabs"></div>
+    <div id="inv-content" class="inv-grid"></div>
+  </div>
+</div>
+<div class="panel-overlay" id="pnl-shop-bibit">
+  <div class="panel">
+    <button class="pcl" id="pnl-bibit-cl">✕</button>
+    <h2>🌱 Toko Bibit</h2>
+    <div class="shop-list" id="shop-bibit-list"></div>
+  </div>
+</div>
+<div class="panel-overlay" id="pnl-shop-jualtan">
+  <div class="panel">
+    <button class="pcl" id="pnl-jualtan-cl">✕</button>
+    <h2>🥕 Toko Jual Tanaman</h2>
+    <div class="shop-list" id="shop-jualtan-list"></div>
+  </div>
+</div>
+<div class="panel-overlay" id="pnl-shop-hewan">
+  <div class="panel">
+    <button class="pcl" id="pnl-hewan-cl">✕</button>
+    <h2>🐄 Toko Hewan</h2>
+    <div style="text-align:center;font-weight:bold;color:#5D4037;margin-bottom:12px;font-size:14px" id="shop-hewan-quota">Hewan: 1/3</div>
+    <div id="shop-hewan-cards" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px"></div>
+    <div style="text-align:center">
+      <button class="shop-btn disabled" id="btn-buy-animal-action" style="padding:10px 24px;font-size:13px;width:100%" disabled>Pilih Hewan Dulu</button>
+    </div>
+  </div>
+</div>
+<div class="panel-overlay" id="pnl-shop-jualter">
+  <div class="panel">
+    <button class="pcl" id="pnl-jualter-cl">✕</button>
+    <h2>🥚 Toko Jual Hasil Ternak</h2>
+    <div id="shop-jualter-content"></div>
+    <div style="text-align:center;margin-top:10px" id="shop-jualter-action-wrap">
+      <button class="shop-btn disabled" id="btn-sell-ternak-action" style="padding:10px 24px;font-size:13px;width:100%" disabled>Pilih Produk untuk Dijual</button>
+    </div>
+  </div>
+</div>
+<div class="panel-overlay" id="pnl-upgrade">
+  <div class="panel">
+    <button class="pcl" id="pnl-upgrade-cl">✕</button>
+    <h2>🔨 Upgrade Plot Tanaman</h2>
+    <div id="upgrade-content"></div>
+  </div>
+</div>
+<div class="panel-overlay" id="pnl-skin">
+  <div class="panel">
+    <button class="pcl" id="pnl-skin-cl">✕</button>
+    <h2>🎨 Skin Ember</h2>
+    <div id="skin-content"></div>
+  </div>
+</div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ==================== CONFIG ====================
+const CONFIG = {
+  mapSize: 80,
+  playerSpeed: 5,
+  playerRunSpeed: 9,
+  playerRadius: 0.4,
+  interactDistance: 4,
+  feedDistance: 3,
+  cameraMinDist: 3,
+  cameraMaxDist: 10,
+  cameraDefaultDist: 7,
+  cameraPitchMin: -10 * Math.PI / 180,
+  cameraPitchMax: 70 * Math.PI / 180,
+  cameraSmoothSpeed: 8,
+  cameraRotateSpeed: 0.003,
+  cameraZoomSpeed: 0.5,
+  crops: {
+    wortel:  { name:'Wortel',  growTime:20,  buyPrice:3,  sell:{biasa:5,rainbow:60,petir:40,batu:20} },
+    gandum:  { name:'Gandum',  growTime:20,  buyPrice:3,  sell:{biasa:5,rainbow:60,petir:40,batu:20} },
+    jagung:  { name:'Jagung',  growTime:40,  buyPrice:6,  sell:{biasa:15,rainbow:80,petir:60,batu:40} },
+    kentang: { name:'Kentang', growTime:60,  buyPrice:10, sell:{biasa:15,rainbow:100,petir:70,batu:50} },
+    pisang:  { name:'Pisang',  growTime:90,  buyPrice:15, sell:{biasa:25,rainbow:125,petir:100,batu:70} },
+    cabai:   { name:'Cabai',   growTime:120, buyPrice:20, sell:{biasa:35,rainbow:135,petir:110,batu:80} }
+  },
+  mutChanceNormal: 0.65,
+  mutChanceRainbow: 0.05,
+  mutChancePetir: 0.10,
+  mutChanceBatu: 0.20,
+  skinApi:  { name:'Skin Api',  price:2000, luck:0.10 },
+  skinDaun: { name:'Skin Daun', price:2500, luck:0.15 },
+  chickenPrice: 200,
+  cowPrice: 300,
+  maxAnimals: 3,
+  productionTime: 120, // 2 menit (120 dtk)
+  eggSellPrice: 5,
+  milkSellPrice: 10,
+  xpPerLevel: 100,
+  maxLevel: 30,
+  xpSiram: 5,
+  xpPanen: 10,
+  plotUpgrades: [
+    { level:10, price:500, plots:2 },
+    { level:15, price:800, plots:2 },
+    { level:20, price:1000, plots:2 }
+  ],
+  bucketCapacity: 5,
+  housePos: { x:0, z:0 },
+  wellPos: { x:7, z:5 },
+  chickenPenPos: { x:-12, z:-2 },
+  cowPenPos: { x:12, z:-2 },
+  shopPos: {
+    bibit:   { x:-9, z:15 },
+    jualTan: { x:-3, z:15 },
+    hewan:   { x:3,  z:15 },
+    jualTer: { x:9,  z:15 }
+  },
+  plotStartX: -3,
+  plotStartZ: 7,
+  plotSpacing: 2,
+  penSize: 7,
+  animalSpeed: 0.5
+};
+
+// ==================== STATE ====================
+const state = {
+  coins: 10,
+  level: 1,
+  xp: 0,
+  bucket: { water: 5 },
+  bucketSkin: null, // null | 'api' | 'daun'
+  inventory: {
+    bibit: { wortel:2, gandum:0, jagung:0, kentang:0, pisang:0, cabai:0 },
+    panen: {},
+    ternak: { telur:0, susu:0 },
+    skins: { api:false, daun:false }
+  },
+  hotbarSelected: 0,
+  plotUpgradeLevel: 0, // 0 = 4 plots, 1 = 6 plots, 2 = 8 plots, 3 = 10 plots
+  plots: [],
+  animals: [],
+  panelOpen: null
+};
+
+// ==================== SAVE / LOAD ====================
+function saveGame() {
+  try {
+    const saveData = {
+      coins: state.coins,
+      level: state.level,
+      xp: state.xp,
+      bucket: state.bucket,
+      bucketSkin: state.bucketSkin,
+      inventory: state.inventory,
+      plotUpgradeLevel: state.plotUpgradeLevel,
+      animalCount: state.animals.length,
+      animals: state.animals.map(a => ({
+        type: a.type,
+        producing: a.producing,
+        productReady: a.productReady,
+        productTimer: a.productTimer
+      }))
+    };
+    localStorage.setItem('plant_it_save', JSON.stringify(saveData));
+  } catch (e) {
+    // ignore
+  }
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem('plant_it_save');
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d.coins !== undefined) state.coins = d.coins;
+    if (d.level !== undefined) state.level = d.level;
+    if (d.xp !== undefined) state.xp = d.xp;
+    if (d.bucket) state.bucket = d.bucket;
+    if (d.bucketSkin !== undefined) state.bucketSkin = d.bucketSkin;
+    if (d.inventory) {
+      if (d.inventory.bibit) state.inventory.bibit = { ...state.inventory.bibit, ...d.inventory.bibit };
+      if (d.inventory.panen) state.inventory.panen = { ...state.inventory.panen, ...d.inventory.panen };
+      if (d.inventory.ternak) state.inventory.ternak = { ...state.inventory.ternak, ...d.inventory.ternak };
+      if (d.inventory.skins) state.inventory.skins = { ...state.inventory.skins, ...d.inventory.skins };
+    }
+    if (d.plotUpgradeLevel !== undefined) {
+      const targetLevel = d.plotUpgradeLevel;
+      for (let i = state.plotUpgradeLevel; i < targetLevel; i++) {
+        if (i === 0) { createSinglePlot(-3, 9.5, 4, false); createSinglePlot(-1, 9.5, 5, false); }
+        else if (i === 1) { createSinglePlot(1, 9.5, 6, false); createSinglePlot(3, 9.5, 7, false); }
+        else if (i === 2) { createSinglePlot(-2, 12, 8, false); createSinglePlot(2, 12, 9, false); }
+        state.plotUpgradeLevel = i + 1;
+      }
+    }
+    if (Array.isArray(d.animals) && d.animals.length > 1) {
+      for (let i = 1; i < d.animals.length; i++) {
+        const savedA = d.animals[i];
+        if (savedA.type === 'ayam') {
+          createChicken(CONFIG.chickenPenPos.x + (Math.random() - 0.5) * 2, CONFIG.chickenPenPos.z + (Math.random() - 0.5) * 2);
+        } else if (savedA.type === 'sapi') {
+          createCow(CONFIG.cowPenPos.x + (Math.random() - 0.5) * 2, CONFIG.cowPenPos.z + (Math.random() - 0.5) * 2);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Gagal memuat save game:', e);
+  }
+}
+
+// ==================== UTILITIES ====================
+const colliders = [];
+const interactables = [];
+const _v3a = new THREE.Vector3();
+const _v3b = new THREE.Vector3();
+const _v3c = new THREE.Vector3();
+const _v3d = new THREE.Vector3();
+
+function distXZ(a, b) {
+  const ax = a.x !== undefined ? a.x : a.position ? a.position.x : 0;
+  const az = a.z !== undefined ? a.z : a.position ? a.position.z : 0;
+  const bx = b.x !== undefined ? b.x : b.position ? b.position.x : 0;
+  const bz = b.z !== undefined ? b.z : b.position ? b.position.z : 0;
+  return Math.sqrt((ax - bx) ** 2 + (az - bz) ** 2);
+}
+
+function lerpAngle(a, b, t) {
+  let d = b - a;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return a + d * Math.min(t, 1);
+}
+
+function createCanvasTex(w, h, fn) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  fn(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function grassTex() {
+  const t = createCanvasTex(512, 512, (ctx, w, h) => {
+    ctx.fillStyle = '#4a8c3f'; ctx.fillRect(0, 0, w, h);
+    for (let i = 0; i < 6000; i++) {
+      const g = 80 + Math.random() * 60;
+      ctx.fillStyle = `rgb(${g - 20},${g + 30},${g - 30})`;
+      ctx.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 3, 1 + Math.random() * 3);
+    }
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(24, 24);
+  return t;
+}
+
+function dirtTex() {
+  return createCanvasTex(256, 256, (ctx, w, h) => {
+    ctx.fillStyle = '#8B6914'; ctx.fillRect(0, 0, w, h);
+    for (let i = 0; i < 2000; i++) {
+      const v = Math.random() * 30;
+      ctx.fillStyle = `rgb(${120 + v},${85 + v},${20 + v})`;
+      ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
+    }
+  });
+}
+
+function cowTexture() {
+  return createCanvasTex(256, 256, (ctx, w, h) => {
+    ctx.fillStyle = '#FAFAFA';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#212121';
+    const spots = [
+      {x: 45, y: 50, r: 35}, {x: 180, y: 70, r: 42},
+      {x: 95, y: 160, r: 48}, {x: 200, y: 195, r: 32},
+      {x: 130, y: 80, r: 24}, {x: 50, y: 205, r: 26}
+    ];
+    for (const s of spots) {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+function textTex(text, bg, fg, tw, th) {
+  return createCanvasTex(tw || 256, th || 64, (ctx, w, h) => {
+    ctx.fillStyle = bg || '#5D4037'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = fg || '#FFFFFF';
+    const fs = Math.min(26, (tw || 2
